@@ -1,0 +1,177 @@
+/* Student Dashboard Styles */
+
+/* Header Styles */
+.dashboard-header {
+    -fx-background-color: #00309c;
+    -fx-background-radius: 0;
+}
+
+.dashboard-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.logged-in-label {
+    -fx-text-fill: #ccccff;
+    -fx-font-size: 14px;
+}
+
+.student-name {
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.logout-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-border-color: white;
+    -fx-border-radius: 3px;
+    -fx-font-weight: bold;
+}
+
+.logout-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Footer Styles */
+.dashboard-footer {
+    -fx-background-color: #f5f5f5;
+    -fx-border-color: #dddddd;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* Content Styles */
+.content-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-fill: #00309c;
+}
+
+/* Tab Styles */
+.dashboard-tabs .tab {
+    -fx-padding: 8px 12px;
+    -fx-background-radius: 5 5 0 0;
+}
+
+.dashboard-tabs .tab:selected {
+    -fx-background-color: white;
+    -fx-background-radius: 5 5 0 0;
+    -fx-border-color: #dddddd;
+    -fx-border-width: 1 1 0 1;
+    -fx-border-radius: 5 5 0 0;
+}
+
+.dashboard-tabs .tab:selected .tab-label {
+    -fx-text-fill: #00309c;
+}
+
+.dashboard-tabs .tab-label {
+    -fx-font-size: 14px;
+}
+
+/* Movie Tab Styles */
+.search-box {
+    -fx-background-color: white;
+    -fx-background-radius: 4px;
+    -fx-border-color: #dddddd;
+    -fx-border-radius: 4px;
+    -fx-padding: 5px 10px;
+}
+
+.search-button {
+    -fx-background-color: #00309c;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.movie-list {
+    -fx-background-color: white;
+    -fx-background-radius: 4px;
+    -fx-border-color: #dddddd;
+    -fx-border-radius: 4px;
+}
+
+.movie-list .list-cell {
+    -fx-padding: 12px;
+    -fx-font-size: 14px;
+}
+
+.movie-list .list-cell:filled:selected {
+    -fx-background-color: #dae4ff;
+    -fx-text-fill: #00309c;
+}
+
+.action-button {
+    -fx-background-color: #00309c;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-padding: 10px 15px;
+}
+
+.action-button:hover {
+    -fx-background-color: #001f64;
+}
+
+.action-button:disabled {
+    -fx-background-color: #cccccc;
+}
+
+/* Reservation Tab Styles */
+.reservation-list {
+    -fx-background-color: white;
+    -fx-background-radius: 4px;
+    -fx-border-color: #dddddd;
+    -fx-border-radius: 4px;
+}
+
+.reservation-list .list-cell {
+    -fx-padding: 12px;
+    -fx-font-size: 14px;
+}
+
+.reservation-list .list-cell:filled:selected {
+    -fx-background-color: #dae4ff;
+    -fx-text-fill: #00309c;
+}
+
+/* Profile Tab Styles */
+.profile-card {
+    -fx-background-color: white;
+    -fx-background-radius: 8px;
+    -fx-border-color: #dddddd;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 8, 0, 0, 0);
+}
+
+.profile-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #555555;
+}
+
+.profile-value {
+    -fx-font-size: 16px;
+    -fx-text-fill: #00309c;
+}
+/* Add this to your student-dashboard.css file */
+
+.white-logout-button {
+    -fx-background-color: white;
+    -fx-text-fill: #00309c;
+    -fx-font-weight: bold;
+    -fx-padding: 6px 15px;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+
+.white-logout-button:hover {
+    -fx-background-color: #f0f0f0;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 0);
+}
+
+.white-logout-button:pressed {
+    -fx-background-color: #e0e0e0;
+}
