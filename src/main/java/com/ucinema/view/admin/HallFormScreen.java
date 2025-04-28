@@ -29,6 +29,9 @@ public class HallFormScreen {
     private final AdminDashboard dashboard;
     private final HallService hallService;
 
+    // Standard hall capacities - added 200-seat option
+    private final Integer[] STANDARD_CAPACITIES = {25, 50, 75, 100, 150, 200};
+
     /**
      * Constructor
      * @param parentStage The parent stage
@@ -81,12 +84,14 @@ public class HallFormScreen {
         TextField nameField = new TextField();
         grid.add(nameField, 1, 1);
 
-        // Capacity
+        // Capacity - changed from TextField to ComboBox
         Label capacityLabel = new Label("Capacity:");
         grid.add(capacityLabel, 0, 2);
 
-        TextField capacityField = new TextField();
-        grid.add(capacityField, 1, 2);
+        ComboBox<Integer> capacityComboBox = new ComboBox<>();
+        capacityComboBox.getItems().addAll(STANDARD_CAPACITIES);
+        capacityComboBox.setPromptText("Select capacity");
+        grid.add(capacityComboBox, 1, 2);
 
         // Location
         Label locationLabel = new Label("Location:");
@@ -100,17 +105,22 @@ public class HallFormScreen {
         grid.add(typeLabel, 0, 4);
 
         ComboBox<String> typeComboBox = new ComboBox<>();
-        typeComboBox.getItems().addAll("standard", "IMAX", "VIP", "3D");
-        typeComboBox.setEditable(true);
+        typeComboBox.getItems().addAll("standard", "VIP", "3D");
+        typeComboBox.setPromptText("Select hall type");
         grid.add(typeComboBox, 1, 4);
 
         // Seating layout (simplified for demo)
         Label seatsLabel = new Label("Seating Layout:");
         grid.add(seatsLabel, 0, 5);
 
-        Label seatsNote = new Label("Default layout will be created automatically");
+        Label seatsNote = new Label("Default layout will be created based on capacity");
         seatsNote.setStyle("-fx-font-style: italic;");
         grid.add(seatsNote, 1, 5);
+
+        // Help text for capacity options
+        Label capacityHelpLabel = new Label("Standard sizes ensure optimal seating arrangements");
+        capacityHelpLabel.setStyle("-fx-font-style: italic; -fx-font-size: 10px;");
+        grid.add(capacityHelpLabel, 1, 6);
 
         // Buttons
         Button saveButton = new Button("Save");
@@ -119,22 +129,27 @@ public class HallFormScreen {
         HBox buttonBox = new HBox(10);
         buttonBox.setAlignment(Pos.BOTTOM_RIGHT);
         buttonBox.getChildren().addAll(saveButton, cancelButton);
-        grid.add(buttonBox, 1, 6);
+        grid.add(buttonBox, 1, 7);
 
         // Populate fields if editing
         if (hallToEdit != null) {
             nameField.setText(hallToEdit.getName());
-            capacityField.setText(String.valueOf(hallToEdit.getCapacity()));
+
+            // Find closest standard capacity
+            int currentCapacity = hallToEdit.getCapacity();
+            Integer closestCapacity = findClosestStandardCapacity(currentCapacity);
+            capacityComboBox.setValue(closestCapacity);
+
             locationField.setText(hallToEdit.getLocation());
             typeComboBox.setValue(hallToEdit.getType());
         }
 
         // Set actions
         saveButton.setOnAction(e -> {
-            if (validateInput(nameField, capacityField, locationField)) {
+            if (validateInput(nameField, capacityComboBox, locationField, typeComboBox)) {
                 saveHall(
                         nameField.getText(),
-                        capacityField.getText(),
+                        capacityComboBox.getValue(),
                         locationField.getText(),
                         typeComboBox.getValue()
                 );
@@ -144,19 +159,41 @@ public class HallFormScreen {
         cancelButton.setOnAction(e -> stage.close());
 
         // Create the scene
-        Scene scene = new Scene(grid, 450, 400);
+        Scene scene = new Scene(grid, 450, 420);
         stage.setScene(scene);
         stage.show();
     }
 
     /**
+     * Find the closest standard capacity to the given value
+     * @param currentCapacity The current capacity value
+     * @return The closest standard capacity
+     */
+    private Integer findClosestStandardCapacity(int currentCapacity) {
+        Integer closest = STANDARD_CAPACITIES[0];
+        int minDiff = Math.abs(currentCapacity - closest);
+
+        for (Integer capacity : STANDARD_CAPACITIES) {
+            int diff = Math.abs(currentCapacity - capacity);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = capacity;
+            }
+        }
+
+        return closest;
+    }
+
+    /**
      * Validate form input
      * @param nameField Name field
-     * @param capacityField Capacity field
+     * @param capacityComboBox Capacity combo box
      * @param locationField Location field
+     * @param typeComboBox Type combo box
      * @return True if input is valid
      */
-    private boolean validateInput(TextField nameField, TextField capacityField, TextField locationField) {
+    private boolean validateInput(TextField nameField, ComboBox<Integer> capacityComboBox,
+                                  TextField locationField, ComboBox<String> typeComboBox) {
         StringBuilder errorMessage = new StringBuilder();
 
         // Check name
@@ -165,18 +202,18 @@ public class HallFormScreen {
         }
 
         // Check capacity
-        try {
-            int capacity = Integer.parseInt(capacityField.getText().trim());
-            if (capacity <= 0) {
-                errorMessage.append("- Capacity must be a positive number\n");
-            }
-        } catch (NumberFormatException e) {
-            errorMessage.append("- Capacity must be a valid number\n");
+        if (capacityComboBox.getValue() == null) {
+            errorMessage.append("- You must select a capacity\n");
         }
 
         // Check location
         if (locationField.getText().trim().isEmpty()) {
             errorMessage.append("- Location is required\n");
+        }
+
+        // Check hall type
+        if (typeComboBox.getValue() == null || typeComboBox.getValue().trim().isEmpty()) {
+            errorMessage.append("- Hall type is required\n");
         }
 
         // Show error message if validation failed
@@ -191,14 +228,12 @@ public class HallFormScreen {
     /**
      * Save hall to database
      * @param name Hall name
-     * @param capacityStr Hall capacity as string
+     * @param capacity Hall capacity
      * @param location Hall location
      * @param type Hall type
      */
-    private void saveHall(String name, String capacityStr, String location, String type) {
+    private void saveHall(String name, Integer capacity, String location, String type) {
         try {
-            int capacity = Integer.parseInt(capacityStr.trim());
-
             if (hallToEdit == null) {
                 // Add new hall
                 Hall newHall = hallService.addHall(name, capacity, location, type);
@@ -231,8 +266,6 @@ public class HallFormScreen {
                     showErrorAlert("Error", "Failed to update hall");
                 }
             }
-        } catch (NumberFormatException e) {
-            showErrorAlert("Error", "Invalid capacity value");
         } catch (Exception e) {
             showErrorAlert("Error", "An error occurred: " + e.getMessage());
         }

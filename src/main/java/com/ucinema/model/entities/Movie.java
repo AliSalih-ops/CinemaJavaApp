@@ -166,4 +166,4 @@ public class Movie {
                 ", genre='" + genre + '\'' +
                 '}';
     }
-}git remote add origin https://github.com/AliSalih-ops/CinemaJavaApp.git
+}

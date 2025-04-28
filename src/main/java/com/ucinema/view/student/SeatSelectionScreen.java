@@ -16,10 +16,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -44,6 +46,8 @@ public class SeatSelectionScreen {
     private final MovieService movieService;
     private final ReservationService reservationService;
     private String selectedSeatId = null;
+    private Text selectedSeatText; // Add this field to track the selected seat text element
+    private Button confirmButton; // Add this field to track the confirm button
 
     /**
      * Constructor
@@ -65,6 +69,9 @@ public class SeatSelectionScreen {
      * Display the seat selection screen
      */
     public void show() {
+        // Force hall refresh to ensure we have all seats
+        hallService.refreshAllHallSeats();
+
         // Get movie and hall information
         Movie movie = movieService.findMovieById(schedule.getMovieId());
         Hall hall = hallService.findHallById(schedule.getHallId());
@@ -94,8 +101,8 @@ public class SeatSelectionScreen {
         root.setCenter(content);
         root.setBottom(bottomPanel);
 
-        // Create the scene
-        Scene scene = new Scene(root, 700, 600);
+        // Create the scene - make it bigger to accommodate larger seat charts
+        Scene scene = new Scene(root, 900, 700);
 
         // Add CSS
         scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
@@ -124,9 +131,11 @@ public class SeatSelectionScreen {
         // Movie details
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         Label details = new Label(String.format(
-                "Date: %s | Hall: %s | Price: $%.2f",
+                "Date: %s | Hall: %s (%s) | Capacity: %d | Price: $%.2f",
                 schedule.getStartTime().format(formatter),
                 hall.getName(),
+                hall.getType(),
+                hall.getCapacity(),
                 schedule.getPrice()
         ));
         details.setStyle("-fx-text-fill: white;");
@@ -142,11 +151,19 @@ public class SeatSelectionScreen {
      * @return ScrollPane containing the seating chart
      */
     private ScrollPane createSeatingChart(Hall hall) {
+        // Debug information
+        System.out.println("DEBUG: Hall capacity: " + hall.getCapacity());
+        System.out.println("DEBUG: Hall type: " + hall.getType());
+        System.out.println("DEBUG: Hall name: " + hall.getName());
+        System.out.println("DEBUG: Hall ID: " + hall.getId());
+
         // Get all seats in the hall
         List<HallGraph.Seat> seats = hallService.getSeatsInHall(hall.getId());
+        System.out.println("Found " + seats.size() + " seats for hall ID " + hall.getId());
 
         // Get reserved seats for this schedule
         List<String> reservedSeats = reservationService.getReservedSeats(schedule.getId());
+        System.out.println("Found " + (reservedSeats != null ? reservedSeats.size() : 0) + " reserved seats for schedule ID " + schedule.getId());
 
         // Create grid pane for seats
         GridPane seatingGrid = new GridPane();
@@ -155,19 +172,30 @@ public class SeatSelectionScreen {
         seatingGrid.setVgap(10);
         seatingGrid.setPadding(new Insets(25));
 
-        // Add screen at the top
-        Rectangle screen = new Rectangle(400, 20);
-        screen.setFill(Color.LIGHTGRAY);
-        screen.setStroke(Color.BLACK);
+        // If there are no seats, add a message and generate them
+        if (seats.isEmpty()) {
+            Label noSeatsLabel = new Label("No seats found for this hall. Generating seats...");
+            noSeatsLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #cc0000;");
+            seatingGrid.add(noSeatsLabel, 0, 1, 10, 1);
 
-        Label screenLabel = new Label("SCREEN");
-        screenLabel.setAlignment(Pos.CENTER);
+            // Add a progress indicator
+            ProgressIndicator progress = new ProgressIndicator();
+            progress.setPrefSize(50, 50);
+            seatingGrid.add(progress, 0, 2, 10, 1);
 
-        VBox screenBox = new VBox(5);
-        screenBox.setAlignment(Pos.CENTER);
-        screenBox.getChildren().addAll(screen, screenLabel);
+            // Force generation of seats
+            hallService.refreshAllHallSeats();
 
-        seatingGrid.add(screenBox, 0, 0, 10, 1); // Span across 10 columns
+            // Get seats again after generation
+            seats = hallService.getSeatsInHall(hall.getId());
+            System.out.println("After generation: Found " + seats.size() + " seats for hall ID " + hall.getId());
+
+            if (seats.isEmpty()) {
+                Label errorLabel = new Label("Could not generate seats. Please check hall configuration.");
+                errorLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #cc0000;");
+                seatingGrid.add(errorLabel, 0, 3, 10, 1);
+            }
+        }
 
         // Group seats by row
         int maxRow = 0;
@@ -178,18 +206,43 @@ public class SeatSelectionScreen {
             maxCol = Math.max(maxCol, seat.getColumn());
         }
 
+        System.out.println("DEBUG: Max row: " + maxRow + ", Max column: " + maxCol);
+
+        // Calculate dimensions for the seating grid
+        double seatWidth = 40; // Width of each seat button
+        double rowLabelWidth = 30; // Width for row labels
+        double screenWidth = Math.max(400, (maxCol + 1) * seatWidth); // Screen width based on max columns
+
+        // Add screen at the top with proper width
+        Rectangle screen = new Rectangle(screenWidth, 20);
+        screen.setFill(Color.LIGHTGRAY);
+        screen.setStroke(Color.BLACK);
+
+        Label screenLabel = new Label("SCREEN");
+        screenLabel.setAlignment(Pos.CENTER);
+
+        VBox screenBox = new VBox(5);
+        screenBox.setAlignment(Pos.CENTER);
+        screenBox.getChildren().addAll(screen, screenLabel);
+        screenBox.setPrefWidth(screenWidth);
+
+        // Add screen spanning across all columns plus row label column
+        seatingGrid.add(screenBox, 0, 0, maxCol + 2, 1);
+
         // Add row labels
         for (int i = 0; i <= maxRow; i++) {
             char rowLabel = (char) ('A' + i);
             Label label = new Label(String.valueOf(rowLabel));
             label.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+            label.setPrefWidth(rowLabelWidth);
+            label.setAlignment(Pos.CENTER);
             seatingGrid.add(label, 0, i + 2); // +2 to account for the screen and gap
         }
 
         // Create seat buttons
         for (HallGraph.Seat seat : seats) {
             Button seatButton = new Button(seat.getId());
-            seatButton.setPrefSize(40, 40);
+            seatButton.setPrefSize(seatWidth, seatWidth);
 
             // Check if seat is reserved
             boolean isReserved = reservedSeats != null && reservedSeats.contains(seat.getId());
@@ -215,13 +268,17 @@ public class SeatSelectionScreen {
                 seatButton.setOnAction(e -> handleSeatSelection(seatButton, seatId));
             }
 
+            // Add seat button to grid - ensure column index is correct
             seatingGrid.add(seatButton, seat.getColumn() + 1, seat.getRow() + 2); // +1 for row label, +2 for screen
         }
 
-        // Create scroll pane
+        // Create scroll pane with appropriate size
         ScrollPane scrollPane = new ScrollPane(seatingGrid);
-        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToWidth(false); // Don't fit to width to prevent distortion
+        scrollPane.setFitToHeight(false); // Don't fit to height to prevent distortion
         scrollPane.setPannable(true);
+        scrollPane.setPrefViewportWidth(Math.min(800, (maxCol + 2) * (seatWidth + 10))); // Limit width to 800px
+        scrollPane.setPrefViewportHeight(Math.min(500, (maxRow + 3) * (seatWidth + 10))); // Limit height to 500px
 
         return scrollPane;
     }
@@ -243,14 +300,20 @@ public class SeatSelectionScreen {
         createLegendItem(legend, "#ffcc66", "Premium");
         createLegendItem(legend, "#99ccff", "Accessible");
         createLegendItem(legend, "#ff6666", "Reserved");
+        createLegendItem(legend, "#6666ff", "Selected");
 
         // Selected seat info
         HBox selectionBox = new HBox(10);
         selectionBox.setAlignment(Pos.CENTER);
+        selectionBox.setPadding(new Insets(10, 0, 10, 0));
 
         Label selectionLabel = new Label("Selected Seat:");
-        Text selectedSeatText = new Text("None");
+        selectionLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+
+        // Store this reference so we can update it later
+        selectedSeatText = new Text("None");
         selectedSeatText.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        selectedSeatText.setFill(Color.web("#00309c"));
 
         selectionBox.getChildren().addAll(selectionLabel, selectedSeatText);
 
@@ -258,29 +321,23 @@ public class SeatSelectionScreen {
         HBox buttonBox = new HBox(20);
         buttonBox.setAlignment(Pos.CENTER);
 
-        Button confirmButton = new Button("Confirm Reservation");
+        // Store this reference so we can enable/disable it later
+        confirmButton = new Button("Confirm Reservation");
+        confirmButton.setStyle("-fx-background-color: #00309c; -fx-text-fill: white; -fx-font-size: 14px;");
         confirmButton.setDisable(true);
-
-        Button cancelButton = new Button("Cancel");
-
-        buttonBox.getChildren().addAll(confirmButton, cancelButton);
-
-        // Add everything to the panel
-        panel.getChildren().addAll(legend, selectionBox, buttonBox);
-
-        // Set actions
         confirmButton.setOnAction(e -> {
             if (selectedSeatId != null) {
                 makeReservation(selectedSeatId);
             }
         });
 
-        cancelButton.setOnAction(e -> {
-            stage.close();
-        });
+        Button cancelButton = new Button("Cancel");
+        cancelButton.setOnAction(e -> stage.close());
 
-        // Update button state when seat is selected
-        updateSelectedSeat(selectedSeatText, confirmButton);
+        buttonBox.getChildren().addAll(confirmButton, cancelButton);
+
+        // Add everything to the panel
+        panel.getChildren().addAll(legend, selectionBox, buttonBox);
 
         return panel;
     }
@@ -310,55 +367,58 @@ public class SeatSelectionScreen {
      * @param seatId The ID of the selected seat
      */
     private void handleSeatSelection(Button seatButton, String seatId) {
-        // Clear previous selection if any
+        // Reset previously selected seat if any
         if (selectedSeatId != null) {
-            // Reset style for all seat buttons
-            for (javafx.scene.Node node : ((GridPane) ((ScrollPane) stage.getScene().getRoot().lookup(".scroll-pane")).getContent()).getChildren()) {
-                if (node instanceof Button && !node.isDisabled()) {
-                    Button btn = (Button) node;
-                    if (btn.getText().equals(selectedSeatId)) {
-                        // Reset to original color based on seat type
-                        HallGraph.Seat seat = hallService.getSeat(selectedSeatId);
-                        if (seat != null) {
-                            switch (seat.getType()) {
-                                case "premium":
-                                    btn.setStyle("-fx-background-color: #ffcc66;");
-                                    break;
-                                case "accessible":
-                                    btn.setStyle("-fx-background-color: #99ccff;");
-                                    break;
-                                default:
-                                    btn.setStyle("-fx-background-color: #99cc99;");
-                            }
-                        }
-                    }
-                }
-            }
+            resetSeatButton(selectedSeatId);
         }
 
         // Set new selection
         selectedSeatId = seatId;
         seatButton.setStyle("-fx-background-color: #6666ff;"); // Blue for selected
 
-        // Update selected seat text and confirm button
-        updateSelectedSeat(
-                (Text) ((HBox) ((VBox) stage.getScene().getRoot().lookup(".vbox")).getChildren().get(1)).getChildren().get(1),
-                (Button) ((HBox) ((VBox) stage.getScene().getRoot().lookup(".vbox")).getChildren().get(2)).getChildren().get(0)
-        );
+        // Update the selected seat text
+        if (selectedSeatText != null) {
+            selectedSeatText.setText(seatId);
+        }
+
+        // Enable the confirm button
+        if (confirmButton != null) {
+            confirmButton.setDisable(false);
+        }
+
+        System.out.println("Selected seat: " + seatId);
     }
 
     /**
-     * Update the selected seat text and confirm button state
-     * @param selectedSeatText The text to update
-     * @param confirmButton The button to update
+     * Reset a seat button to its original style
+     * @param seatId The seat ID to reset
      */
-    private void updateSelectedSeat(Text selectedSeatText, Button confirmButton) {
-        if (selectedSeatId != null) {
-            selectedSeatText.setText(selectedSeatId);
-            confirmButton.setDisable(false);
-        } else {
-            selectedSeatText.setText("None");
-            confirmButton.setDisable(true);
+    private void resetSeatButton(String seatId) {
+        // Find the button in the grid
+        ScrollPane scrollPane = (ScrollPane) ((BorderPane) stage.getScene().getRoot()).getCenter();
+        GridPane grid = (GridPane) scrollPane.getContent();
+
+        for (javafx.scene.Node node : grid.getChildren()) {
+            if (node instanceof Button) {
+                Button button = (Button) node;
+                if (button.getText().equals(seatId)) {
+                    // Set color based on seat type
+                    HallGraph.Seat seat = hallService.getSeat(seatId);
+                    if (seat != null) {
+                        switch (seat.getType()) {
+                            case "premium":
+                                button.setStyle("-fx-background-color: #ffcc66;"); // Gold for premium
+                                break;
+                            case "accessible":
+                                button.setStyle("-fx-background-color: #99ccff;"); // Blue for accessible
+                                break;
+                            default:
+                                button.setStyle("-fx-background-color: #99cc99;"); // Green for standard
+                        }
+                    }
+                    break;
+                }
+            }
         }
     }
 
@@ -368,20 +428,47 @@ public class SeatSelectionScreen {
      */
     private void makeReservation(String seatId) {
         try {
+            System.out.println("Attempting to make reservation for seat: " + seatId);
+
+            // Show a loading indicator
+            BorderPane root = (BorderPane) stage.getScene().getRoot();
+
+            StackPane loadingPane = new StackPane();
+            loadingPane.setStyle("-fx-background-color: rgba(0,0,0,0.5);");
+
+            VBox loadingBox = new VBox(10);
+            loadingBox.setAlignment(Pos.CENTER);
+
+            ProgressIndicator progress = new ProgressIndicator();
+            progress.setPrefSize(60, 60);
+
+            Label loadingLabel = new Label("Processing reservation...");
+            loadingLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
+
+            loadingBox.getChildren().addAll(progress, loadingLabel);
+            loadingPane.getChildren().add(loadingBox);
+
+            // Add loading overlay
+            root.setCenter(loadingPane);
+
+            // Create the reservation
             Reservation reservation = reservationService.makeReservation(student.getId(), schedule.getId(), seatId);
 
             if (reservation != null) {
+                System.out.println("Reservation created successfully");
                 showSuccessAlert("Reservation Successful", "Your seat has been reserved successfully");
-                stage.close();
-                parentStage.close();
 
-                // Refresh student dashboard
-                StudentDashboard dashboard = new StudentDashboard(parentStage, student);
-                dashboard.show();
+                // Close this stage only
+                stage.close();
             } else {
-                showErrorAlert("Reservation Failed", "Failed to make reservation");
+                // If reservation failed, restore the seating chart
+                ScrollPane content = createSeatingChart(hallService.findHallById(schedule.getHallId()));
+                root.setCenter(content);
+
+                showErrorAlert("Reservation Failed", "Failed to make reservation. Please try again.");
             }
         } catch (Exception e) {
+            e.printStackTrace();
             showErrorAlert("Reservation Error", e.getMessage());
         }
     }

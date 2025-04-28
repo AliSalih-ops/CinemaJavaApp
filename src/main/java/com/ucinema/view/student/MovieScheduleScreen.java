@@ -3,8 +3,10 @@ package com.ucinema.view.student;
 import com.ucinema.model.entities.Movie;
 import com.ucinema.model.entities.MovieSchedule;
 import com.ucinema.model.entities.Student;
+import com.ucinema.model.entities.Hall;
 import com.ucinema.service.MovieScheduleService;
 import com.ucinema.service.ReservationService;
+import com.ucinema.service.HallService;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -38,6 +40,7 @@ public class MovieScheduleScreen {
     private final Stage parentStage;
     private final MovieScheduleService scheduleService;
     private final ReservationService reservationService;
+    private final HallService hallService;
 
     /**
      * Constructor
@@ -49,9 +52,10 @@ public class MovieScheduleScreen {
         this.parentStage = parentStage;
         this.student = student;
         this.movie = movie;
-        this.stage = new Stage();
+        this.stage = parentStage; // Use the parentStage instead of creating a new one
         this.scheduleService = new MovieScheduleService();
         this.reservationService = new ReservationService();
+        this.hallService = new HallService();
     }
 
     /**
@@ -75,7 +79,7 @@ public class MovieScheduleScreen {
         root.setCenter(content);
 
         // Create the scene
-        Scene scene = new Scene(root, 600, 500);
+        Scene scene = new Scene(root, 700, 500); // Made the window slightly wider
 
         // Add CSS
         scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
@@ -147,10 +151,18 @@ public class MovieScheduleScreen {
         ObservableList<String> formattedSchedules = FXCollections.observableArrayList();
 
         for (MovieSchedule schedule : schedules) {
+            // Get the Hall name instead of just displaying the ID
+            Hall hall = hallService.findHallById(schedule.getHallId());
+            String hallName = (hall != null) ? hall.getName() : "Unknown Hall";
+            String hallType = (hall != null) ? hall.getType() : "";
+            String hallLocation = (hall != null) ? hall.getLocation() : "";
+
             String formattedSchedule = String.format(
-                    "Date: %s | Hall ID: %d | Price: $%.2f",
+                    "Date: %s | Hall: %s (%s) | Location: %s | Price: $%.2f",
                     schedule.getStartTime().format(formatter),
-                    schedule.getHallId(),
+                    hallName,
+                    hallType,
+                    hallLocation,
                     schedule.getPrice()
             );
             formattedSchedules.add(formattedSchedule);
@@ -158,6 +170,7 @@ public class MovieScheduleScreen {
 
         // Create list view
         ListView<String> scheduleListView = new ListView<>(formattedSchedules);
+        scheduleListView.setPrefHeight(300); // Ensure the list has enough space
 
         // Book button
         Button bookButton = new Button("Book Selected Schedule");
@@ -174,21 +187,24 @@ public class MovieScheduleScreen {
             int selectedIndex = scheduleListView.getSelectionModel().getSelectedIndex();
             if (selectedIndex >= 0 && selectedIndex < schedules.size()) {
                 MovieSchedule selectedSchedule = schedules.get(selectedIndex);
-                SeatSelectionScreen seatScreen = new SeatSelectionScreen(stage, student, selectedSchedule);
+                // Create a NEW stage for the seat selection screen
+                Stage seatStage = new Stage();
+                SeatSelectionScreen seatScreen = new SeatSelectionScreen(seatStage, student, selectedSchedule);
                 seatScreen.show();
             }
         });
 
         backButton.setOnAction(e -> {
-            stage.close();
+            // Don't create a new dashboard, just return to the existing one
             StudentDashboard dashboard = new StudentDashboard(parentStage, student);
             dashboard.show();
         });
 
         // Button container
-        HBox buttonBox = new HBox(10);
+        HBox buttonBox = new HBox(20);
         buttonBox.setAlignment(Pos.CENTER);
         buttonBox.getChildren().addAll(bookButton, backButton);
+        buttonBox.setPadding(new Insets(10, 0, 0, 0));
 
         content.getChildren().addAll(contentTitle, scheduleListView, buttonBox);
 

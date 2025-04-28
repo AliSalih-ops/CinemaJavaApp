@@ -184,6 +184,15 @@ public class LoginScreen {
                 return;
             }
 
+            // Check if this is admin login
+            if (email.equals("admin@university.edu") && password.equals("admin123")) {
+                System.out.println("Admin credentials detected, redirecting to admin dashboard");
+                AdminDashboard adminDashboard = new AdminDashboard(stage);
+                adminDashboard.show();
+                return;
+            }
+
+            // If not admin, try student login
             Student student = studentService.login(email, password);
 
             if (student != null) {
