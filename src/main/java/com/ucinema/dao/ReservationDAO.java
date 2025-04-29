@@ -240,4 +240,21 @@ public class ReservationDAO {
             return false;
         }
     }
+    /**
+     * Find reservations by student ID - alternative method name for consistency
+     * @param studentId The student ID
+     * @return List of reservations for the student
+     */
+    public List<Reservation> findByStudentId(int studentId) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Reservation> query = session.createQuery(
+                    "FROM Reservation WHERE studentId = :studentId AND status != 'cancelled' ORDER BY reservationTime DESC",
+                    Reservation.class);
+            query.setParameter("studentId", studentId);
+            return query.list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 }

@@ -191,4 +191,12 @@ public class ReservationService {
     public List<Reservation> findReservationsByTimeRange(LocalDateTime start, LocalDateTime end) {
         return reservationDAO.findByReservationTimeRange(start, end);
     }
+    /**
+     * Get all reservations for a specific student (non-cancelled)
+     * @param studentId The student ID
+     * @return List of reservations for the student
+     */
+    public List<Reservation> getReservationsByStudent(int studentId) {
+        return reservationDAO.findByStudentId(studentId);
+    }
 }

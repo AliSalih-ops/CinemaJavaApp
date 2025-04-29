@@ -1,9 +1,13 @@
 package com.ucinema.view.student;
 
 import com.ucinema.model.entities.Movie;
+import com.ucinema.model.entities.MovieSchedule;
+import com.ucinema.model.entities.Reservation;
 import com.ucinema.model.entities.Student;
 import com.ucinema.service.MovieService;
+import com.ucinema.service.MovieScheduleService;
 import com.ucinema.service.ReservationService;
+import com.ucinema.service.HallService;
 import com.ucinema.view.LoginScreen;
 
 import javafx.collections.FXCollections;
@@ -32,6 +36,7 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -43,6 +48,10 @@ public class StudentDashboard {
     private final Student student;
     private final MovieService movieService;
     private final ReservationService reservationService;
+    private final HallService hallService;
+    private final MovieScheduleService scheduleService;
+    private ListView<Reservation> reservationListView;
+    private ObservableList<Reservation> reservationList;
 
     /**
      * Constructor
@@ -54,6 +63,8 @@ public class StudentDashboard {
         this.student = student;
         this.movieService = new MovieService();
         this.reservationService = new ReservationService();
+        this.hallService = new HallService();
+        this.scheduleService = new MovieScheduleService();
     }
 
     /**
@@ -112,7 +123,7 @@ public class StudentDashboard {
         header.getStyleClass().add("dashboard-header");
 
         // Logo
-        ImageView logoView = new ImageView(new Image(getClass().getResourceAsStream("/images/bau_logo.png")));
+        ImageView logoView = new ImageView(new Image(getClass().getResourceAsStream("/images/bau-logo1.jpg")));
         logoView.setFitHeight(40);
         logoView.setPreserveRatio(true);
 
@@ -289,22 +300,104 @@ public class StudentDashboard {
         Text title = new Text("My Reservations");
         title.getStyleClass().add("content-title");
 
-        topContent.getChildren().add(title);
+        // Refresh button
+        Button refreshButton = new Button("Refresh Reservations");
+        refreshButton.getStyleClass().add("refresh-button");
+        refreshButton.setOnAction(e -> loadReservations());
+
+        HBox titleBar = new HBox(20);
+        titleBar.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(titleBar, Priority.ALWAYS);
+        titleBar.getChildren().addAll(title, refreshButton);
+
+        topContent.getChildren().add(titleBar);
 
         // Reservations list
         VBox centerContent = new VBox(15);
         centerContent.setPadding(new Insets(0, 20, 20, 20));
 
-        ListView<String> reservationListView = new ListView<>();
+        reservationListView = new ListView<>();
         reservationListView.getStyleClass().add("reservation-list");
         VBox.setVgrow(reservationListView, Priority.ALWAYS);
 
-        // Load reservations (this is a placeholder - implement actual reservation listing)
-        ObservableList<String> reservationList = FXCollections.observableArrayList(
-                "Sample Reservation 1 - Movie A - Hall 1 - Seat B5 - 7:00 PM",
-                "Sample Reservation 2 - Movie B - Hall 2 - Seat C3 - 9:30 PM"
-        );
-        reservationListView.setItems(reservationList);
+        // Custom cell factory to display reservation details
+        reservationListView.setCellFactory(param -> new javafx.scene.control.ListCell<Reservation>() {
+            @Override
+            protected void updateItem(Reservation reservation, boolean empty) {
+                super.updateItem(reservation, empty);
+
+                if (empty || reservation == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    VBox cellContent = new VBox(8);
+                    cellContent.setPadding(new Insets(10, 5, 10, 5));
+                    cellContent.getStyleClass().add("reservation-cell");
+
+                    try {
+                        // Get schedule information
+                        MovieSchedule schedule = scheduleService.findScheduleById(reservation.getScheduleId());
+
+                        // Get movie details
+                        String movieTitle = "Unknown Movie";
+                        if (schedule != null) {
+                            Movie movie = movieService.findMovieById(schedule.getMovieId());
+                            if (movie != null) {
+                                movieTitle = movie.getTitle();
+                            }
+                        }
+
+                        // Get hall details
+                        String hallName = "Unknown Hall";
+                        if (schedule != null) {
+                            try {
+                                hallName = hallService.findHallById(schedule.getHallId()).getName();
+                            } catch (Exception ex) {
+                                System.out.println("Could not find hall: " + ex.getMessage());
+                            }
+                        }
+
+                        // Format date/time
+                        String dateTime = "Unknown Time";
+                        if (schedule != null && schedule.getStartTime() != null) {
+                            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                            dateTime = schedule.getStartTime().format(formatter);
+                        }
+
+                        // Create labels
+                        Label movieLabel = new Label(movieTitle);
+                        movieLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+                        movieLabel.setTextFill(Color.web("#00309c"));
+
+                        Label detailsLabel = new Label(String.format(
+                                "Date/Time: %s | Hall: %s | Seat: %s",
+                                dateTime, hallName, reservation.getSeatId()));
+                        detailsLabel.setTextFill(Color.GRAY);
+
+                        Label priceLabel = new Label(String.format("Price: $%.2f", reservation.getPrice()));
+
+                        cellContent.getChildren().addAll(movieLabel, detailsLabel, priceLabel);
+                    } catch (Exception e) {
+                        // Fallback simple display if we can't get all details
+                        Label simpleLabel = new Label(String.format(
+                                "Reservation #%d - Seat: %s - $%.2f",
+                                reservation.getId(), reservation.getSeatId(), reservation.getPrice()));
+                        simpleLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+
+                        Label timeLabel = new Label("Reserved on: " +
+                                reservation.getReservationTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+
+                        cellContent.getChildren().addAll(simpleLabel, timeLabel);
+                    }
+
+                    setGraphic(cellContent);
+                    setText(null);
+                }
+            }
+        });
+
+        // Load user's reservations
+        loadReservations();
 
         // Cancel reservation button
         Button cancelButton = new Button("Cancel Selected Reservation");
@@ -319,7 +412,7 @@ public class StudentDashboard {
                 (observable, oldValue, newValue) -> cancelButton.setDisable(newValue == null));
 
         cancelButton.setOnAction(e -> {
-            String selectedReservation = reservationListView.getSelectionModel().getSelectedItem();
+            Reservation selectedReservation = reservationListView.getSelectionModel().getSelectedItem();
             if (selectedReservation != null) {
                 // Show confirmation dialog
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -329,9 +422,15 @@ public class StudentDashboard {
 
                 alert.showAndWait().ifPresent(response -> {
                     if (response == javafx.scene.control.ButtonType.OK) {
-                        // Implement actual cancellation logic
-                        reservationList.remove(selectedReservation);
-                        showInfoAlert("Reservation Cancelled", "Your reservation has been cancelled successfully");
+                        // Cancel the reservation
+                        boolean success = reservationService.cancelReservation(selectedReservation.getId());
+                        if (success) {
+                            // Reload reservations
+                            loadReservations();
+                            showInfoAlert("Reservation Cancelled", "Your reservation has been cancelled successfully");
+                        } else {
+                            showErrorAlert("Error", "Failed to cancel reservation");
+                        }
                     }
                 });
             }
@@ -341,7 +440,35 @@ public class StudentDashboard {
         contentPane.setCenter(centerContent);
 
         tab.setContent(contentPane);
+
+        // Add a listener to refresh reservations when tab is selected
+        tab.setOnSelectionChanged(event -> {
+            if (tab.isSelected()) {
+                loadReservations();
+            }
+        });
+
         return tab;
+    }
+
+    /**
+     * Load the student's reservations
+     */
+    private void loadReservations() {
+        List<Reservation> reservations = reservationService.getReservationsByStudent(student.getId());
+        reservationList = FXCollections.observableArrayList(reservations);
+
+        if (reservationListView != null) {
+            reservationListView.setItems(reservationList);
+
+            if (reservations.isEmpty()) {
+                Label noReservationsLabel = new Label("You have no reservations");
+                noReservationsLabel.setStyle("-fx-padding: 20px; -fx-font-style: italic;");
+                reservationListView.setPlaceholder(noReservationsLabel);
+            }
+        }
+
+        System.out.println("Loaded " + reservations.size() + " reservations for student " + student.getId());
     }
 
     /**
@@ -448,6 +575,19 @@ public class StudentDashboard {
      */
     private void showInfoAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
+    /**
+     * Show an error alert
+     * @param title Alert title
+     * @param content Alert content
+     */
+    private void showErrorAlert(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);

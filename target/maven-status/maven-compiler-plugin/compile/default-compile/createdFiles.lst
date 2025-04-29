@@ -32,6 +32,7 @@ com\ucinema\dao\MovieDAO.class
 com\ucinema\model\datastructures\ScheduleBST.class
 com\ucinema\view\admin\SeatingChartScreen.class
 com\ucinema\service\MovieService.class
+com\ucinema\view\student\StudentDashboard$2.class
 com\ucinema\view\admin\AdminDashboard.class
 com\ucinema\model\datastructures\ScheduleBST$Node.class
 com\ucinema\view\student\MovieScheduleScreen.class

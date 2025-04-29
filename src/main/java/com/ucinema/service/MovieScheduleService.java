@@ -189,4 +189,5 @@ public class MovieScheduleService {
     public List<MovieSchedule> findActiveSchedules() {
         return scheduleDAO.findActiveSchedules();
     }
+
 }

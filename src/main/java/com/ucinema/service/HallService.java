@@ -342,8 +342,7 @@ public class HallService {
                     ". Using closest standard capacity.");
 
             // Find closest standard capacity
-            int closestCapacity = findClosestStandardCapacity(capacity);
-            capacity = closestCapacity;
+            capacity = findClosestStandardCapacity(capacity);
         }
 
         Hall hall = new Hall(name, capacity, location, type);
@@ -560,15 +559,14 @@ public class HallService {
 
     /**
      * Cancel a seat reservation
+     *
      * @param seatId The seat ID
-     * @return True if successful
      */
-    public boolean cancelSeatReservation(String seatId) {
+    public void cancelSeatReservation(String seatId) {
         boolean success = hallGraph.cancelReservation(seatId);
         if (!success) {
             System.out.println("Failed to cancel reservation for seat: " + seatId);
         }
-        return success;
     }
 
     /**
