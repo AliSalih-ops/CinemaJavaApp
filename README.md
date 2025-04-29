@@ -3,6 +3,13 @@
 A JavaFX-based desktop application that allows students to browse movies, view schedules, and reserve cinema seats inside the university. Admins can manage movie schedules and hall details. Designed with a modern UI and full MVC architecture.
 
 ---
+# Movie Reservation System
+
+## 🎥 Overview
+A web-based movie reservation system where students can browse movies, check showtimes, and reserve seats. Admins can schedule movies and manage showtimes.
+
+---
+
 ## 📸 Screenshots
 
 ### 1. Login / Demo Admin Access
@@ -43,8 +50,19 @@ A JavaFX-based desktop application that allows students to browse movies, view s
 
 ---
 
-📁 *Make sure to place your screenshots in a `/screenshots` folder within your project directory for proper linking.*
+### 4. Select Seats – Movie Reservation
 
+![Select Seats Screenshot](screenshots/select-seats.png)
+
+> Seat selection interface for movie reservations.  
+> Key features:
+> - Dynamic seat grid based on theater layout
+> - Available, selected, and occupied seat colors
+> - Real-time seat availability updates
+> - Confirmation popup when seats are selected
+> - Option to deselect or change selected seats
+
+---
 ---
 
 ## 🚀 Getting Started
