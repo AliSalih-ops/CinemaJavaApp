@@ -3,6 +3,47 @@
 A JavaFX-based desktop application that allows students to browse movies, view schedules, and reserve cinema seats inside the university. Admins can manage movie schedules and hall details. Designed with a modern UI and full MVC architecture.
 
 ---
+## 📸 Screenshots
+
+### 1. Login / Demo Admin Access
+
+![Login Page Screenshot](screenshots/login.png)
+
+> This screen allows users to log in with student credentials or enter as a demo admin.  
+> Key features:
+> - Secure login form
+> - "Login as Demo Admin" option
+> - Branding with university logo and cinema theme
+
+---
+
+### 2. Admin View: Movie Scheduling
+
+![Admin Scheduling Screenshot](screenshots/admin-schedule.png)
+
+> Admin panel for scheduling movies and managing showtimes.  
+> Key features:
+> - Dropdowns to select movies and halls
+> - Time and date pickers
+> - Seat layout configuration
+> - Confirmation and error feedback messages
+
+---
+
+### 3. Student Dashboard – Browse & Reserve
+
+![Student Dashboard Screenshot](screenshots/student-dashboard.png)
+
+> Student interface to browse movies and make reservations.  
+> Key features:
+> - Filterable movie list
+> - Showtimes per movie
+> - Reservation system with real-time availability
+> - Tabs for Movies, Reservations, and Profile
+
+---
+
+📁 *Make sure to place your screenshots in a `/screenshots` folder within your project directory for proper linking.*
 
 ---
 
