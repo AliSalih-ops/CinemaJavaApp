@@ -1,3 +1,34 @@
+# 🎬 University Cinema Hall Reservation System
+
+A JavaFX-based desktop application that allows students to browse movies, view schedules, and reserve cinema seats inside the university. Admins can manage movie schedules and hall details. Designed with a modern UI and full MVC architecture.
+
+---
+
+---
+
+## 🚀 Getting Started
+
+### 🧾 Requirements
+
+- Java 11+
+- JavaFX 17+
+- Maven
+
+### 📦 Clone and Run
+
+```bash
+git clone https://github.com/your-username/university-cinema.git
+```
+```bash
+cd university-cinema
+```
+```bash
+mvn javafx:run
+```
+
+
+
+
 # 🎬 University Cinema Hall Reservation System – Architecture Overview
 
 ## 📐 Main Architecture Patterns
